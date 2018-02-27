@@ -1,0 +1,85 @@
+1) 부서별 인원수, 평균 급여, 가장 많은 급여, 가장 적은 급여를 추출하세요
+db.employees.aggregate([
+    { $group : { _id : "$deptno", 
+                 people_num : {$sum : 1},
+                 avg_sal : {$avg : "$sal"}, 
+                 max_sal : {$max : "$sal"}, 
+                 min_sal : {$min : "$sal"} } 
+    }
+])
+
+
+db.employees.aggregate([
+     { $project : { _id:0, deptno:1, ename:1, sal:1}}
+    ,{ $group   : { _id:"$deptno", pcnt:{$sum:1}, sal_info:{$addToSet:{ sal:'$sal', ename:'$ename'}}}}
+    ,{ $project : { _id:1, pcnt:1, sal_info_max : {$max:"$sal_info"}, sal_info_min : {$min : "$sal_info"}}}
+])
+
+
+
+1-1) 가장 많은, 적은 급여를 받는 사람의 이름과 직업.
+db.employees.aggregate([
+    { $group : { 
+                 _id : { name : '$ename', deptno : '$deptno' }, 
+                 max_sal : { $max : '$sal' },
+               } 
+    },
+    { $sort : { max_sal : -1 } },
+    { $group : { 
+                 _id : '$_id.deptno', 
+                 max_sal : { $first : '$max_sal' },
+                 max_name : { $first : '$_id.name' } ,
+                 min_sal : { $last : '$max_sal' },
+                 min_name : { $last : '$_id.name' } ,                 
+               } 
+    }
+])
+
+
+
+2) 직업별 급여의 총 합과 평균을 추출하세요.
+db.employees.aggregate([
+    { $group : { _id : "$job", 
+                 total_sal : {$sum : "$sal"}, 
+                 avg_sal : {$avg : "$sal"} }
+    }
+])
+
+
+
+3) 직업별 가장 많은 급여를 받는 사람의 이름을 추출하세요.
+db.employees.aggregate([
+    { $group : { 
+                 _id : { name : '$ename', job : '$job' }, 
+                 max_sal : { $max : '$sal' } 
+               } 
+    },
+    { $sort : { max_sal : -1 } },
+    { $group : { 
+                 _id : '$_id.job', 
+                 name : { $first : '$_id.name' } , 
+                 max_sal : { $first : '$max_sal' } 
+               } 
+    }
+])
+
+
+db.employees.aggregate([
+     { $group : {_id:"$job", sal_info:{$addToSet:{ sal:"$sal", ename:"$ename"}}}},
+     { $project : { _id:0, job:"$_id", max_sal_info:{$max:"$sal_info"}}}
+])
+
+
+
+4) 급여를 가장 많이 받는 사람과 가장 적게 받는 사람의 차는 얼마인가요?
+db.employees.aggregate([
+    { $group : { _id : 0, 
+                 max_sal : {$max : "$sal"},
+                 min_sal : {$min : "$sal"}
+               }
+    },
+    { $project : { _id : 0,
+                   max_sub_min : { $subtract : [ "$max_sal", "$min_sal" ] }
+                 }
+    }
+])
